@@ -9,7 +9,7 @@ This is our website built with Django intended to be used for analysis of land s
 Right now, the supported location are Cao Bang, Ha Giang and Son La of Vietnam, and please choose a 
 time range that has the year 2007 to 2009.
 
-Currently, our website is deployed on flyio: https://bravenewworld-sparc.fly.dev/
+Currently, our website is deployed on: https://bravenewworldsparc.dev/
 Please note that the website is kinda slow since we didn't spend much on the service as the web is still a 2-day project 
 and not fully completed. If  you use it, please select Cao Bang and the range date should include the year 2009.
 
