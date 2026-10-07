@@ -28,7 +28,7 @@ You need postgresql with PostGis extension.
 Additionally, we would also like to combine Machine Learning or AI model for land subsidence 
 prediction, but we haven't been able to implement such a model in such a short time
 
-Anyways, to run the code
+Anyways, to run the code, ensure you have Python venv and a PostgreSQL database and PostGis matches the one in the setting.py .
 
 ```
 pip freeze > requirementrequirements.txt
@@ -41,3 +41,13 @@ python manage.py runserver
 ![Selecting location](./gallery/UI1.png)
 ![Results](./gallery/UI2.png)
 ![Details and download](./gallery/UI3.png)
+
+
+## Update (2026)
+
+The web has been discontinued, I have made a video [video](https://youtu.be/OlICspvswCw?si=Tfn8YvFPv0IXUCDE) showcasing the old web while it was still hosted.
+
+This project holds a special place in my heart, as it was the first time I have ever won a Hackathon with my own idea!! ദ്ദി(˵ •̀ ᴗ - ˵ ) ✧
+
+![Best use of model](./gallery/best%20use%20of%20model.jpeg)
+![First prize](./gallery/first_prize_cert.jpeg)
