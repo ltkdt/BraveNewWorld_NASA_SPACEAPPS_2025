@@ -12,22 +12,39 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+env = environ.Env(DEBUG=(bool, False))
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-h*(nxiefniwybjug6jn6!a*ib(b+1*j1h-yz5dql0r1$@e7o2u'
+SECRET_KEY = env.str(
+  "SECRET_KEY", 
+  default="django-insecure-h*(nxiefniwybjug6jn6!a*ib(b+1*j1h-yz5dql0r1$@e7o2u",
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
+
+DEBUG = env.bool("DEBUG", default=True)  # new
+
+#ALLOWED_HOSTS = ['https://fly.io/apps/processing/monitoring', 'https://processing.fly.dev', 'http://127.0.0.1:8000/']
+
+ALLOWED_HOSTS = ["www.bravenewworldsparc.dev","bravenewworldsparc.dev", "localhost", "127.0.0.1", "188.166.251.46"]  
+CSRF_TRUSTED_ORIGINS = ["https://www.bravenewworldsparc.dev", "https://bravenewworldsparc.dev", "http://www.bravenewworldsparc.dev" ,"http://localhost:8000"]  
+
+#CSRF_TRUSTED_ORIGINS = ['https://fly.io/apps/processing/monitoring', 'https://processing.fly.dev']
+
+
+'''
 DEBUG = True
-
 ALLOWED_HOSTS = []
-
+'''
 
 # Application definition
 
@@ -40,10 +57,12 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     "django.contrib.gis",
     "geoApp",
+    "whitenoise.runserver_nostatic",
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -78,6 +97,7 @@ WSGI_APPLICATION = 'geoview.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.contrib.gis.db.backends.postgis',
@@ -89,6 +109,19 @@ DATABASES = {
     },
 }
 
+'''
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': 'bravenewworld',         # <-- Replace with your database name
+        'USER': 'ltkdt',         # <-- Replace with your database user
+        'PASSWORD': 'ku754g93', # <-- Replace with your database password
+        'HOST': 'localhost',            # Or your DB host
+        'PORT': '5432',                 # Default PostgreSQL port
+    },
+}
+
+'''
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -124,17 +157,22 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+#STATIC_URL = 'static/'
+STATIC_URL = "static/"
+STATICFILES_DIRS = [os.path.join(BASE_DIR,'static'),
+                    os.path.join(BASE_DIR,'geoApp', 'templates', 'geoApp')]
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE ="whitenoise.storage.CompressedManifestStaticFilesStorage" 
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-MEDIA_URL = "media/"
+MEDIA_URL = '/media/'
 
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR,'static')
-]
-
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# Store uploaded media inside the project during development so the
+# dev server and local user have a writable location. Previously this
+# pointed to '/data/media' which required root access and caused
+# PermissionError when admin tried to replace files.
+MEDIA_ROOT = BASE_DIR / "media"

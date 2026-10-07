@@ -1,0 +1,123 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <title>Land Subsidence</title>
+
+  <!-- Bootstrap core CSS -->
+  <link rel="stylesheet" href="{% static '/bootstrap/css/bootstrap.min.css' %}">
+
+  <!-- Date range picker -->
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/latest/jquery.min.js"></script>
+	<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+	<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+	<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+
+  <!-- Custom CSS -->
+  <style>
+    .navbar-brand .twitter-handle {
+      color: #1DA1F2; /* Twitter blue color */
+      margin-left: 5px;
+    }
+
+    .lead {
+      color: #FF3366; /* Custom color for lead text */
+    }
+  </style>
+  
+
+</head>
+
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark static-top">
+    <div class="container">
+  <a class="navbar-brand" href="https://twitter.com/lawrence_kim_"> Brave New World | <span><a href="https://www.spaceappschallenge.org/">NASA Space Hackathon</a></span></a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarResponsive">
+        <ul class="navbar-nav ml-auto">
+          <li class="nav-item active">
+            <a class="nav-link" href="">Welcome</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+
+  <!-- Page Content -->
+  <div class="container">
+    <div class="row">
+
+      <div class="col-lg-12 text-center">
+        <h1 class="mt-5">Research and Analysis of Land Subsidence and Erosion in the Northern Mountainous Region of Vietnam</h1>
+        <p class="lead text-danger">From Brave New World, a team in NASA Space Apps Challenge</p>
+
+    <form id="coordForm" action="/revClick/" method="POST">
+          <div class="row justify-content-center mb-2">
+            <div class="col-12">
+              <label class="form-label h5">How to use</label>
+              <div class="text-muted small mt-2">
+                Please select the period of time you want to examine or two identical dates to chooose a single day <br>
+                Then select a coordinate in the area of your interest and the system will try to detect the closest location <br>
+                where data is available. 
+              </div>
+            </div>
+          </div>
+          {% csrf_token %}
+
+          <p></p>
+          <div class="row justify-content-center g-2 mb-3">
+            <div class="col-md-3">
+              {{ form.start_active }}
+            </div>
+            <div class="col-md-3">
+              {{ form.end_active }}
+            </div>
+          </div>
+
+          <div class="mb-3"></div> <!-- Adds extra space below the map -->
+
+          <input type="hidden" name="lat" id="latInput">
+          <input type="hidden" name="lng" id="lngInput">
+
+          <button type="submit" class="btn btn-outline-dark rounded px-4 fw-medium">Submit</button>
+          <div class="mb-5"></div> <!-- Adds extra space below the map -->
+    </form>
+  
+    {{ my_map|safe }}
+
+    <div class="mb-5"></div> <!-- Adds extra space below the map -->
+
+
+        <ul class="list-unstyled">
+          <li>Brave New World</li>
+          <li>This is the web of our team for NASA Space App Challenge</li>
+          <li>Contact: +254759629059</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap core JavaScript -->
+  <script src="{% static '/jquery/jquery.slim.min.js' %}"></script>
+  <script src="{% static '/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+  <script>
+    console.log(document.getElementById('latInput').value);
+  </script>
+
+
+</body>
+
+</html>

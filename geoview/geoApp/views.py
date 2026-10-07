@@ -1,30 +1,55 @@
 
+from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt
 from .forms import DateInput, LastActiveForm
-from .models import StaticFigure
+from .models import StaticFigure, RasterMap
 from django.db.models import Q
 from datetime import datetime
+from pathlib import Path
 
 import math
 import os
+import json
 import folium
 import geopandas as gpd
 from folium import GeoJson
 from folium.plugins import MousePosition
 from folium.template import Template
+from urllib.parse import urlparse, unquote
 
+import openai
+import base64
+
+from dotenv import load_dotenv
+
+load_dotenv()  # Load environment variables from .env file
+
+def encode_image_base64(image_path):
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode("utf-8")
+
+
+min_long_northern_region= 102.144135
+max_long_northern_region= 107.464146
+min_lat_northern_region= 20.72855
+max_lat_northern_region= 23.51667
+
+'''
+
+'''
 
 # Create your views here.
 def home(request):
     form = LastActiveForm()
     shp_dir = os.path.join(os.getcwd(), 'media', 'vietnam')
-
-    m = folium.Map(location=[16.4667, 107.5833], title='Viet Nam' ,zoom_start=7)
+    m = folium.Map(max_bounds = True,location=[16.4667, 107.5833], title='Viet Nam' ,zoom_start=8, max_zoom=12, min_zoom=7,
+                   min_lat=min_lat_northern_region, max_lat=max_lat_northern_region,
+                   min_lon=min_long_northern_region, max_lon=max_long_northern_region)
     style_dbscl = {'fillColor': "#63a6bc", 'color': "#2f81b5"}
     vietnam = gpd.read_file(os.path.join(shp_dir, 'vnm.shp'))
     vietnam_geojson = vietnam.to_crs("EPSG:4326").to_json()
-    GeoJson(vietnam_geojson, name='dbscl', style_function=lambda x: style_dbscl).add_to(m)
+    GeoJson(vietnam_geojson, name='Vietnam', style_function=lambda x: style_dbscl).add_to(m)
     folium.LayerControl().add_to(m)
 
     # Cao Bang
@@ -64,7 +89,7 @@ def home(request):
 
     popup1 = folium.LatLngPopup()
     m.add_child(popup1)
-
+    
     popup1._template = Template("""
             {% macro script(this, kwargs) %}
                 var {{this.get_name()}} = L.popup();
@@ -192,11 +217,14 @@ def find_nearest_location(input_lat, input_lng, locations_dict):
     
     return nearest_location, min_distance
 
-@csrf_exempt
+# @csrf_exempt
 def rev_click(request):
     if request.method == 'POST':
         lat = request.POST.get('lat')
         lng = request.POST.get('lng')
+        if lat=="" and lng=="":
+            lat,lng = 22.6667, 106.2500  # Default to Cao Bang if no coordinates provided
+        print(request.body)
 
         print(f"Received coordinates: Latitude={lat}, Longitude={lng}")
         # You can process the coordinates as needed here
@@ -226,12 +254,14 @@ def rev_click(request):
 def output(request, neartest_location=None):
     # Get the nearest location from URL parameter or set default
     figures = []
+
+    exist_raster_map_flag = False
     
     if neartest_location and neartest_location != "Không có dữ liệu":
         # Get date range from session
         start_date_str = request.session.get('start_active')
         end_date_str = request.session.get('end_active')
-        
+
         # Parse date strings back to date objects
         start_date = None
         end_date = None
@@ -253,6 +283,48 @@ def output(request, neartest_location=None):
                 region=neartest_location,
                 date_taken__range=[start_date, end_date]
             ).order_by('-date_taken')
+
+            RasterObject = RasterMap.objects.filter(
+                region=neartest_location,
+                date_taken__lte=end_date
+                ).order_by('-date_taken').first()
+            
+            image_src = None
+            if RasterObject and RasterObject.image:
+                exist_raster_map_flag = True
+                # prefer filesystem path if file exists on disk
+                try:
+                    img_path = RasterObject.image.path
+
+                except Exception:
+                    img_path = None
+
+                if img_path and os.path.exists(img_path):
+                    image_src = img_path
+                else:
+                    # fall back to absolute URL (so browser will load it)
+                    image_src = request.build_absolute_uri(RasterObject.image.url)
+
+                left, bottom, right, top = RasterObject.bounds
+                shp_dir = os.path.join(os.getcwd(), 'media', 'cao_bang')
+                m = folium.Map(max_bounds = True,location=RasterObject.map_center, title='Region of Interest' ,zoom_start=8, max_zoom=12, min_zoom=7)
+                image = folium.raster_layers.ImageOverlay(
+                #image=RasterObject.image.url,
+                image=image_src,
+                bounds=[[bottom, left], [top, right]],
+                opacity=0.8,
+                interactive=True,
+                cross_origin=False,
+                )
+                style_dbscl = {'fillColor': "#e63306", 'color': "#e65d0e"}
+                cao_bang = gpd.read_file(os.path.join(shp_dir, 'cao_bang.shp'))
+                cao_bang_geojson = cao_bang.to_crs("EPSG:4326").to_json()
+                GeoJson(cao_bang_geojson, name='Cao Bang', style_function=lambda x: style_dbscl).add_to(m)
+                image.add_to(m)
+                folium.LayerControl().add_to(m)
+                
+                m = m._repr_html_()
+
         elif start_date:
             # Only start date provided - filter from start date onwards
             figures = StaticFigure.objects.filter(
@@ -265,15 +337,154 @@ def output(request, neartest_location=None):
                 region=neartest_location,
                 date_taken__lte=end_date
             ).order_by('-date_taken')
+
+            
+
         else:
             # No date range - show all figures for the region
             figures = StaticFigure.objects.filter(
                 region=neartest_location
             ).order_by('-date_taken')
-    
-    context = {
-        'neartest_location': neartest_location,
-        'figures': figures,
-        'figure_count': len(figures)
-    }
+
+    if exist_raster_map_flag:
+        context = {
+            'neartest_location': neartest_location,
+            'figures': figures,
+            'figure_count': len(figures),
+            'raster_map': m if (neartest_location != "Không có dữ liệu" and end_date) else None,
+        'raster_obj': RasterObject if (neartest_location != "Không có dữ liệu" and end_date) else None,
+        'color_map': request.build_absolute_uri(RasterObject.colormap.url) if (neartest_location != "Không có dữ liệu" and end_date) else None,
+        }
+    else:
+        context = {
+            'neartest_location': neartest_location,
+            'figures': figures,
+            'figure_count': len(figures),
+        }
     return render(request, 'geoApp/output.html', context)
+    #return render(request, 'geoApp/overlay_map.html')
+
+client = openai.OpenAI(api_key=os.getenv("OPEN_AI_API_KEY"))
+
+def chatbot_analyze(request):
+    image_url = request.GET.get('image')
+    preload_image = None
+    # local media folder where uploaded figures are stored
+    media_folder = os.path.join(os.getcwd(), 'media', 'figures')
+    '''
+    if image_url:
+        # Extract filename from provided image URL/path and map it to local media folder
+        parsed = urlparse(image_url)
+        path = parsed.path or image_url
+        filename = os.path.basename(unquote(path))
+        print("Filename extracted:", filename)
+        file_on_system = os.path.join(media_folder, filename)
+        # keep the original image reference for template rendering
+        preload_image = image_url
+    '''
+    parsed = urlparse(image_url)
+    parsed_path = unquote(parsed.path)
+    
+    filename = os.path.basename(parsed_path)
+    #print("joined", os.path.join(Path(os.getcwd()).parents[0], parsed_path))
+    print("Filename from parsed path:", filename)
+    #filename = os.path.basename(unquote(path)):
+    
+    file_on_system = os.path.join(media_folder, filename)
+    # keep the original image reference for template rendering
+    preload_image = image_url
+
+    
+    stream = None
+    full_response = ""
+    # ensure file_on_system is set (may have been populated above from image URL)
+    # Do NOT try to open/encode the file yet; do that only when needed and only when file exists.
+    print(file_on_system)
+    #b64_img = encode_image_base64(file_on_system)
+
+    if request.method == 'POST':
+        # Extract message and image URL from incoming request.
+        user_message = ''
+        image_path_or_url = None
+
+        # If client sent JSON, parse it first
+        try:
+            if request.content_type and 'application/json' in request.content_type:
+                data = json.loads(request.body.decode('utf-8') or '{}')
+                user_message = data.get('message') or data.get('question') or ''
+                image_path_or_url = data.get('image') or data.get('image_url')
+        except Exception:
+            # If parsing fails, fall back to form data below
+            pass
+
+        # Fall back to form-encoded POST or GET params
+        if not user_message:
+            user_message = request.POST.get('message', '')
+        if not image_path_or_url:
+            image_path_or_url = request.POST.get('image') or request.GET.get('image')
+
+        # If image is a relative path (starts with '/'), convert to absolute URL
+        if image_path_or_url and image_path_or_url.startswith('/'):
+            try:
+                image_path_or_url = request.build_absolute_uri(image_path_or_url)
+            except Exception:
+                # leave as-is if build fails
+                pass
+
+        # Call the vision-capable model with the image URL and user question
+        try:
+
+            # Prefer a local file if it exists: try to map the provided image path/url to local media
+            
+            final_image_source = None
+            local_candidate = None
+            try:
+                if image_path_or_url:
+                    parsed = urlparse(image_path_or_url)
+                    filename_send = os.path.basename(unquote(parsed.path))
+                    local_candidate = os.path.join(media_folder, filename_send)
+                    if os.path.exists(local_candidate):
+                        final_image_source = f"data:image/jpeg;base64,{encode_image_base64(local_candidate)}"
+                    else:
+                        # not on disk — fall back to using the provided URL directly
+                        final_image_source = image_path_or_url
+                else:
+                    # If no image_path_or_url provided, but a preload image from GET existed, try it
+                    if file_on_system and os.path.exists(file_on_system):
+                        final_image_source = f"data:image/jpeg;base64,{encode_image_base64(file_on_system)}"
+            except Exception as e:
+                print("Image path handling error:", e)
+                final_image_source = image_path_or_url or None
+
+            
+            output = client.responses.create(
+               model="gpt-4.1-mini",
+               instructions="""You are an expert in satellite remote sensing and geospatial analysis, especially InSAR technique and its application on tracking land subsidence and erosion.
+         Answer the question of the user about this topic and refuse to answer if the question is not related to this topic. There is also an image of Digital Elevation Model (DEM) or unwrapped interferogram from Sentinel-1 / Sentinel 2 satellite created using SNAP that the user may ask you about.
+         """,
+               input=[{
+        "role": "user",
+        "content": [
+            {"type": "input_text", "text": user_message},
+            {
+                "type": "input_image",
+                "image_url": final_image_source,
+            },
+        ],
+    }],
+               stream=False,
+               temperature=0.3,
+               max_output_tokens=500
+            )
+        except Exception as e:
+            # Return JSON error so the frontend can display a helpful message
+            return JsonResponse({'message': f'Error creating response: {e}'}, status=500)
+
+        full_response = output.output_text
+                
+        return JsonResponse({'message': full_response})
+    context = {'preload_image': preload_image}
+    return render(request, 'geoApp/chatbot.html', context)
+
+def _3d_dem_view(request):
+    return render(request, 'geoApp/dem.html')

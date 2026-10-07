@@ -1,0 +1,373 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>Output</title>
+  <link rel="stylesheet" href="{% static '/bootstrap/css/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    .figure-card {
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    .figure-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+      border: 2px solid #007bff !important;
+    }
+    .figure-card .card-img-top {
+      transition: transform 0.3s ease;
+    }
+    .figure-card:hover .card-img-top {
+      transform: scale(1.05);
+    }
+    .modal-body img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      transition: transform 0.3s ease;
+    }
+    .modal-body img:hover {
+      transform: scale(1.02);
+    }
+    .figure-info {
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 15px;
+    }
+    .modal-dialog {
+      max-width: 95vw;
+    }
+    .modal-content {
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    .modal-header {
+      border-bottom: 1px solid #dee2e6;
+      background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    }
+    .modal-footer {
+      border-top: 1px solid #dee2e6;
+      background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    }
+    .modal-body .row {
+      align-items: flex-start !important;
+    }
+    .modal-body .col-lg-7, .modal-body .col-xl-6 {
+      position: sticky;
+      top: 0;
+    }
+  </style>
+</head>
+
+<body>
+   <!-- Header bar (same as home page) -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="/">GeospatialIntelligence</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="/">Home page</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="https://www.spaceappschallenge.org/" target="_blank">NASA Space Apps Challenge</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+  <!-- End header bar -->
+
+  
+  <div class="container mt-5">
+    <h2 class="mb-4">Results</h2>
+    <div class="alert alert-info">
+      <h4>Nearest location:</h4>
+      <p class="mb-0"><strong>{{ neartest_location }}</strong></p>
+    </div>
+    
+    <!-- Figures Section -->
+    {% if figures %}
+      <div class="mt-4">
+        <h3 class="mb-3">A total of {{ figure_count }} results found</h3>
+        <div class="row">
+          {% for figure in figures %}
+            <div class="col-md-6 col-lg-4 mb-4" name="figure">
+              <div class="card h-100 shadow-sm figure-card" 
+                   data-bs-toggle="modal" 
+                   data-bs-target="#figureModal"
+                   data-figure-name="{{ figure.name }}"
+                   data-figure-region="{{ figure.region }}"
+                   data-figure-date="{{ figure.date_taken|date:'d/m/Y' }}"
+                   data-figure-description="{{ figure.description }}"
+                   data-figure-image="{% if figure.figure_file %}{{ figure.figure_file.url }}{% endif %}"
+                   data-figure-id="{{ figure.ID }}">
+                <div class="card-img-top" style="height: 250px; overflow: hidden;">
+                  {% if figure.figure_file %}
+                    <img src="{{ figure.figure_file.url }}" 
+                         class="img-fluid" 
+                         style="width: 100%; height: 100%; object-fit: cover;" 
+                         alt="{{ figure.name }}"
+                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIG5vdCBmb3VuZDwvdGV4dD48L3N2Zz4='">
+                  {% else %}
+                    <div class="d-flex align-items-center justify-content-center h-100 bg-light">
+                      <span class="text-muted">No image available </span>
+                    </div>
+                  {% endif %}
+                </div>
+                <div class="card-body d-flex flex-column">
+                  <h5 class="card-title">{{ figure.name }}</h5>
+                  <p class="card-text text-muted small mb-2">
+                    <i class="fas fa-map-marker-alt"></i> {{ figure.region }}
+                  </p>
+                  {% if figure.date_taken %}
+                    <p class="card-text text-muted small mb-2">
+                      <i class="fas fa-calendar"></i> {{ figure.date_taken|date:"d/m/Y" }}
+                    </p>
+                  {% endif %}
+                  {% if figure.description %}
+                    <p class="card-text flex-grow-1">{{ figure.description|truncatewords:20 }}</p>
+                  {% endif %}
+                </div>
+                <div class="card-footer bg-transparent">
+                  <small class="text-muted">
+                    <i class="fas fa-info-circle"></i> Click for more info
+                  </small>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% else %}
+      <div class="mt-4">
+        <div class="alert alert-warning">
+          <h5>Không tìm thấy hình ảnh</h5>
+          <p class="mb-0">
+            {% if neartest_location and neartest_location != "Không có dữ liệu" %}
+              No results found in <strong>{{ neartest_location }}</strong> for the selected period of time.
+            {% else %}
+              Please select a position on the map to view related results and figure.
+            {% endif %}
+          </p>
+        </div>
+      </div>
+    {% endif %}
+    
+    <div class="mt-4">
+      <a href="/" class="btn btn-primary">Return to home page</a>
+    </div>
+  </div>
+
+  <!-- Figure Modal -->
+  <div class="modal fade" id="figureModal" tabindex="-1" aria-labelledby="figureModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen-lg-down modal-xl modal-dialog-centered">
+      <div class="modal-content" style="height: 90vh;">
+        <div class="modal-header">
+          <h5 class="modal-title" id="figureModalLabel">
+            <i class="fas fa-image"></i> <span id="modalFigureName"></span>
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="closeModal()"></button>
+        </div>
+        <div class="modal-body" style="padding: 0; height: calc(90vh - 120px); overflow: hidden;">
+          <div class="row h-100">
+            <div class="col-lg-7 col-xl-6" style="padding: 15px; display: flex; align-items: flex-start; justify-content: center; background: #f8f9fa;">
+              <div class="text-center w-100" style="margin-top: 10px;">
+                <img id="modalFigureImage" src="" alt="" class="img-fluid" style="max-height: calc(90vh - 150px); max-width: 100%; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+              </div>
+            </div>
+            <div class="col-lg-5 col-xl-6" style="padding: 20px 25px 20px 20px; background: #ffffff; border-left: 10px solid #dee2e6; overflow-y: auto;">
+              <div class="figure-info" style="margin-top: 0px; margin-right: 0px;">
+                <h6><i class="fas fa-info-circle text-primary"></i> Detailed info</h6>
+                <hr>
+                <p><strong><i class="fas fa-map-marker-alt text-success"></i> Area: </strong> <span id="modalFigureRegion"></span></p>
+                <p><strong><i class="fas fa-calendar text-info"></i> Date taken:</strong> <span id="modalFigureDate"></span></p>
+                <p><strong><i class="fas fa-hashtag text-secondary"></i> ID:</strong> <span id="modalFigureId"></span></p>
+                <hr>
+                <h6><i class="fas fa-align-left text-primary"></i> Description </h6>
+                <p id="modalFigureDescription" class="text-muted"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" onclick="downloadImage()">
+            <i class="fas fa-download"></i> Download
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="{% static '/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+  
+  <script>
+    // Handle modal data population
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('DOM loaded, setting up modal functionality');
+      
+      // Use event delegation to handle clicks on figure cards
+      document.addEventListener('click', function(e) {
+        // Check if the clicked element is a figure card or inside one
+        const figureCard = e.target.closest('.figure-card');
+        if (figureCard) {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('Figure card clicked:', figureCard.dataset.figureName);
+          
+          // Populate modal with figure data
+          const nameEl = document.getElementById('modalFigureName');
+          const regionEl = document.getElementById('modalFigureRegion');
+          const dateEl = document.getElementById('modalFigureDate');
+          const descEl = document.getElementById('modalFigureDescription');
+          const idEl = document.getElementById('modalFigureId');
+          
+          if (nameEl) nameEl.textContent = figureCard.dataset.figureName || 'No name available';
+          if (regionEl) regionEl.textContent = figureCard.dataset.figureRegion || 'No area found';
+          if (dateEl) dateEl.textContent = figureCard.dataset.figureDate || 'No info available';
+          if (descEl) descEl.textContent = figureCard.dataset.figureDescription || 'No description provided';
+          if (idEl) idEl.textContent = figureCard.dataset.figureId || 'N/A';
+          
+          // Set image source
+          const img = document.getElementById('modalFigureImage');
+          if (img) {
+            if (figureCard.dataset.figureImage && figureCard.dataset.figureImage !== 'None' && figureCard.dataset.figureImage !== '') {
+              img.src = figureCard.dataset.figureImage;
+              img.alt = figureCard.dataset.figureName || 'Figure image';
+              console.log('Setting image src:', figureCard.dataset.figureImage);
+            } else {
+              img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIG5vdCBmb3VuZDwvdGV4dD48L3N2Zz4=';
+              img.alt = 'No image found';
+            }
+          }
+          
+          // Show the modal
+          const modalElement = document.getElementById('figureModal');
+          if (modalElement) {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+              const modal = new bootstrap.Modal(modalElement);
+              modal.show();
+              console.log('Bootstrap modal shown');
+            } else {
+              // Fallback: show modal manually
+              modalElement.style.display = 'block';
+              modalElement.classList.add('show');
+              modalElement.setAttribute('aria-hidden', 'false');
+              console.log('Fallback modal shown');
+            }
+          }
+        }
+      });
+      
+      // Also set up direct event listeners as backup
+      const figureCards = document.querySelectorAll('.figure-card');
+      console.log('Found figure cards:', figureCards.length);
+      
+      figureCards.forEach((card, index) => {
+        console.log('Setting up direct listener for card', index);
+        card.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('Direct listener - Card clicked:', this.dataset.figureName);
+          
+          // Use the same logic as above
+          const nameEl = document.getElementById('modalFigureName');
+          const regionEl = document.getElementById('modalFigureRegion');
+          const dateEl = document.getElementById('modalFigureDate');
+          const descEl = document.getElementById('modalFigureDescription');
+          const idEl = document.getElementById('modalFigureId');
+          
+          if (nameEl) nameEl.textContent = this.dataset.figureName || 'No name available';
+          if (regionEl) regionEl.textContent = this.dataset.figureRegion || 'No area found';
+          if (dateEl) dateEl.textContent = this.dataset.figureDate || 'No info available';
+          if (descEl) descEl.textContent = this.dataset.figureDescription || 'No description provided';
+          if (idEl) idEl.textContent = this.dataset.figureId || 'N/A';
+          
+          // Set image source
+          const img = document.getElementById('modalFigureImage');
+          if (img) {
+            if (this.dataset.figureImage && this.dataset.figureImage !== 'None' && this.dataset.figureImage !== '') {
+              img.src = this.dataset.figureImage;
+              img.alt = this.dataset.figureName || 'Figure image';
+              console.log('Setting image src:', this.dataset.figureImage);
+            } else {
+              img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIG5vdCBmb3VuZDwvdGV4dD48L3N2Zz4=';
+              img.alt = 'No image found';
+            }
+          }
+          
+          // Show the modal
+          const modalElement = document.getElementById('figureModal');
+          if (modalElement) {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+              const modal = new bootstrap.Modal(modalElement);
+              modal.show();
+              console.log('Bootstrap modal shown');
+            } else {
+              // Fallback: show modal manually
+              modalElement.style.display = 'block';
+              modalElement.classList.add('show');
+              modalElement.setAttribute('aria-hidden', 'false');
+              console.log('Fallback modal shown');
+            }
+          }
+        });
+      });
+    });
+
+
+    // Close modal function
+    function closeModal() {
+      const modal = document.getElementById('figureModal');
+      if (modal) {
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+          const bsModal = bootstrap.Modal.getInstance(modal);
+          if (bsModal) {
+            bsModal.hide();
+          }
+        } else {
+          // Fallback: hide modal manually
+          modal.style.display = 'none';
+          modal.classList.remove('show');
+          modal.setAttribute('aria-hidden', 'true');
+        }
+      }
+    }
+
+    // Download image function
+    function downloadImage() {
+      const img = document.getElementById('modalFigureImage');
+      const link = document.createElement('a');
+      link.href = img.src;
+      link.download = document.getElementById('modalFigureName').textContent + '.png';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Add loading effect for images
+    document.addEventListener('DOMContentLoaded', function() {
+      const images = document.querySelectorAll('img');
+      images.forEach(img => {
+        img.addEventListener('load', function() {
+          this.style.opacity = '1';
+        });
+        img.style.opacity = '0.7';
+        img.style.transition = 'opacity 0.3s ease';
+      });
+    });
+  </script>
+</body>
+
+</html>
